@@ -1,2 +1,4 @@
-# cooper_os
-ECE 357: Operating Systems
+### ECE 357: Operating Systems coursework
+
+#### Problem Set 1: 
+Mini cat program.
