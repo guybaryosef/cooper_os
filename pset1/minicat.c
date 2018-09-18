@@ -10,11 +10,12 @@
  *  % ./minicat [-b ###] [-o outfile] infline1 [...infile2...]
  *  % ./minicat [-b ###] [-o outfile] 
  * 
- *  where
- *     - [-b ###] is an optional argument to specify the buffer size in bytes.
- *     - [-o outfile] is an optional argument to specify an output file.
- *     - if no input files are specified, will read from stdin. 
- *     - Similarly, one can specify stdin as the file '-' 
+*  where
+*     - [-b ###] is an optional argument to specify the buffer size in bytes.
+*     - [-o outfile] is an optional argument to specify an output file.
+*     - If no input files are specified, program will read from stdin.
+*     - If the filename ‘-’ is not taken then its usage will direct the program to read from stdin.
+ 
  */
 
 #include <stdio.h>
