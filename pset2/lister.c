@@ -12,8 +12,6 @@
  *  where dir is the starting directory.
  *  If 'dir' is not specified, the program defaults to the current working directory.
  */
-////////////////////////////////// TO DO: /////////////////////////////////////
-///////////////// FINISH UP RELATIVE PATH IMPLEMENTATION && OPTIONAL SIMLINK STUFF ////////////
 
 
 #define _GNU_SOURCE
@@ -26,6 +24,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+
 
 int recursive_listing(DIR *cur, char *dir_name, FILE* pass, const char *path);
 void parse_mode(int mode, char *output);
