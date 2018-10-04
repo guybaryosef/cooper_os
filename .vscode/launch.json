@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/pset2/a.out",
-            "args": [],
+            "args": ["../../.."],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
