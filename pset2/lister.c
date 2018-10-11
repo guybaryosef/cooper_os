@@ -5,7 +5,7 @@
  *
  * lister - Provides a recursive directory listing 
  *          that copies the format of "find -ls"
- * version 1
+ * version 2
  * 
  * To run: 
  *    % gcc lister.c -o lister
@@ -17,7 +17,7 @@
  * 
  */
 
-#define MAX_PATH_LEN 256 /* maximum length of path allowed */
+#define MAX_PATH_LEN 1024 /* maximum length of path allowed */
 #define MAX_USRN_LEN 32
 #define MAX_GRPN_LEN 32
 #define _GNU_SOURCE
@@ -97,13 +97,14 @@ int recursive_listing(DIR *cur, char *dir_name, const char *curPath) {
         int pathSizeLeft;
         if ( strcmp(de->d_name, ".") ) {
 
-            myPath[strlen(curPath)] = '/';
-            myPath[strlen(curPath)+1] = 0;
-
-            if (( pathSizeLeft = MAX_PATH_LEN - strlen(de->d_name)) < 0) {
+            if (( pathSizeLeft = MAX_PATH_LEN - strlen(de->d_name) - 2) < 0) {
                 fprintf(stderr, "Path is too long; I decline to look at paths longer than %d length.\n", MAX_PATH_LEN);
                 return -1;
             }
+
+            myPath[strlen(curPath)] = '/';
+            myPath[strlen(curPath)+1] = 0;
+
             strncat(myPath, de->d_name, pathSizeLeft + 1);
         }
 
@@ -199,7 +200,7 @@ void parse_mode(const int mode, char *output) {
     output[6] = (mode & S_IXGRP) ? 'x' : '-';
     output[7] = (mode & S_IROTH) ? 'r' : '-';
     output[8] = (mode & S_IWOTH) ? 'w' : '-';
-    output[9] = (mode & S_IXGRP) ? 'x' : '-';
+    output[9] = (mode & S_IXOTH) ? 'x' : '-';
     output[10] = 0;
 }
 
@@ -212,7 +213,7 @@ void parse_mode(const int mode, char *output) {
 void parse_pass(char *user, const int uid, char *group, const int gid) {
 
     struct passwd *usr;
-    if ( (usr = getpwuid(uid)) != NULL ) {
+    if (usr = getpwuid(uid)) {
         strncpy(user, usr->pw_name, MAX_USRN_LEN-1);
         user[MAX_USRN_LEN-1] = 0;
     }
@@ -220,7 +221,7 @@ void parse_pass(char *user, const int uid, char *group, const int gid) {
         snprintf(user, MAX_USRN_LEN-1, "%d", uid);
 
     struct group *grp;
-    if ( (grp = getgrgid(gid)) != NULL) {
+    if (grp = getgrgid(gid)) {
         strncpy(group, grp->gr_name, MAX_GRPN_LEN-1);
         user[MAX_GRPN_LEN-1] = 0;
     }
