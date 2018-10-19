@@ -6,3 +6,5 @@ Mini cat program.
 #### Pset 2:
 A list function that replicates the output of 'find /starting_directory -ls'
 
+#### Pset 3:
+A simple Shell Program
