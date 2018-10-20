@@ -31,43 +31,55 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 
+
 #define MAX_PATH_LEN 1024  /* max length of file path allowed */
 #define MAX_LINE_SIZE 4096 /* max length of stdin allowed */
 #define MAX_ARG_SIZE 2048  /* max amount of arguments in stdin line */
 
 
-
 enum redirection {red_Open = 0, red_CreateTrun, red_CreateApp };
 
 
-
-int myShell();
+int myShell(FILE *input);
 int tokenizeLine(char *line, char **tokens);
 int parseLine(char ** tokens);
 int performIOredirect(char **tokens);
-int redirectIO(char *cur, int to_redirect, enum redirection val);
+int redirectIO(char **tokens, int size, int to_redirect, enum redirection val);
 
 
+int main(int argc, char **argv) {
+    if (argc > 2) {
+        fprintf(stderr, "Correct Usage: /shell [script-file]\n");
+        return -1;
+    }
+    else if (argc == 2) {
+        FILE *input;
+        if (!(input = fopen(argv[1], "r"))) {
+            fprintf(stderr, "Unable to open script file %s: %s\n", argv[1], strerror(errno));
+            return -1;
+        }
 
-int main() {
-    return myShell();
+        return myShell(input);
+    }
+    else 
+        return myShell(stdin);
 }
 
 
 /*
  * Runs as a shell
  */
-int myShell() {
+int myShell(FILE *input) {
     char *buffer;
     if (!(buffer = malloc(sizeof(char)*MAX_LINE_SIZE))) {
-        fprintf(stderr, "Unable to allocate buffer in order to read from stdin: %s\n", strerror(errno));
+        fprintf(stderr, "Unable to allocate buffer in order to read from input: %s\n", strerror(errno));
         return -1;
     }
 
     int getline_ret;
     size_t n = MAX_LINE_SIZE;
     int exit_status = 0;
-    while ( (getline_ret = getline(&buffer, &n, stdin)) != -1) {
+    while ( (getline_ret = getline(&buffer, &n, input)) != -1) {
         
         char **tokens; /* the current line parsed to words */
         if (!(tokens = malloc(sizeof(char *)*MAX_ARG_SIZE))) {
@@ -97,6 +109,7 @@ int myShell() {
         return -1;
     }
     
+    free(buffer);
     return exit_status;
 }
 
@@ -131,10 +144,7 @@ int tokenizeLine(char *line, char **tokens) {
         fprintf(stderr, "Too many arguments in stdin line.\n");
         return -1;
     }
-
-    tokens = realloc(tokens, sizeof(char *)*(index+1)); /* all OK if it fails */
     tokens[index] = NULL;
-
     return 0;
 }
 
@@ -152,7 +162,7 @@ int tokenizeLine(char *line, char **tokens) {
  */
 int parseLine(char **tokens) {
     /* check for built-in commands and comments */
-    if (!strcmp(tokens[0], "#")) /* ignore comments */
+    if (tokens[0][0] == '#') /* ignore comments */
         return 0;
     else if (!strcmp(tokens[0], "cd")) { 
         if (!tokens[1] || chdir(tokens[1])) {
@@ -178,14 +188,17 @@ int parseLine(char **tokens) {
         return 0;
     }
 
-
     /* fork, run command, return time heuristics */
     int pid;
-    struct rusage ru;
-    unsigned status;
-    void *null;
+    int status;
+    
     clock_t start, end;
-    start = times(null);
+    struct tms time_start, time_end;
+    
+    if ((start = times(&time_start)) == -1) {
+        fprintf(stderr, "Error getting start time of command:%s\n", strerror(errno));
+        return -1;
+    }
 
     if ((pid = fork()) == -1) {
         fprintf(stderr, "Error during process forking: %s\n", strerror(errno));
@@ -197,23 +210,35 @@ int parseLine(char **tokens) {
             exit(-1);
         
         tokens[command_size] = NULL;
-        fprintf(stderr, "Executing: %s\n", tokens[0]);
-        if (execvp(tokens[0], tokens+sizeof(char)) == -1)
+        
+        fprintf(stderr, "Executing command: %s\n", tokens[0]);
+
+        if (execvp(tokens[0], tokens) == -1)
             exit(-1);
     }
     else { /* in parent */
-        end = times(null);
-        if (wait3(&status, 0, &ru) == -1) { /* wait for child */
+        if (wait(&status) == -1) { /* wait for child */
             fprintf(stderr, "Child process %d exited in error: %s\n", pid, strerror(errno));
             return -1;
         }
 
+        if ((end = times(&time_end)) == -1) {
+            fprintf(stderr, "Error getting start time of command:%s\n", strerror(errno));
+            return -1;
+        }
+
+        long clktck;
+        if ((clktck = sysconf(_SC_CLK_TCK)) == -1) {
+            fprintf(stderr, "Error acquiring clock ticks per second from sysconf:%s\n", strerror(errno));
+            return -1;
+        };
+
         /* print child statistics */
         fprintf(stderr, "Command returned with exit code: %d,\n", status);
-        fprintf(stderr, "consuming %ld real seconds, %f user, %f system.\n",
-                    end - start, 
-                    ru.ru_utime.tv_sec + 0.001*ru.ru_utime.tv_usec,
-                    ru.ru_stime.tv_sec + 0.001*ru.ru_stime.tv_usec);   
+        fprintf(stderr, "consuming %f real seconds, %f user, %f system.\n",
+                    (end - start) / (double) clktck, 
+                    (time_end.tms_cutime - time_start.tms_cutime) / (double) clktck,
+                    (time_end.tms_cstime - time_start.tms_cstime) / (double) clktck);   
     }
     return status;
 }
@@ -229,11 +254,11 @@ int parseLine(char **tokens) {
  *  - On failur: -1
  */
 int performIOredirect(char **tokens) {
-    char *cur;
+
     int beg_io_index = -1;
     int size = 0;
-    for (cur = tokens[0] ; cur != NULL ; cur += sizeof(char *), ++size) {
-        if ((int)strlen(cur) > 2 && strstr(cur, "2>>") == cur) {
+    for (char *cur = tokens[size] ; cur != NULL ; cur = tokens[++size]) {
+        if (strstr(cur, "2>>") == cur) {
             if (beg_io_index  == -1)
                 beg_io_index = size;
 
@@ -242,11 +267,10 @@ int performIOredirect(char **tokens) {
                 return -1; 
             }
 
-            if (redirectIO(cur, STDERR_FILENO, red_CreateApp) == -1)
+            if (redirectIO(tokens, size, STDERR_FILENO, red_CreateApp) == -1)
                 return -1;
         }
-        if (strlen(cur) > 1) {
-            if (strstr(cur, ">>") == cur) {
+        else if (strstr(cur, ">>") == cur) {
                 if (beg_io_index  == -1)
                     beg_io_index = size;
                 
@@ -255,24 +279,23 @@ int performIOredirect(char **tokens) {
                     return -1; 
                 }
 
-                if (redirectIO(cur, STDOUT_FILENO, red_CreateApp) == -1)
+                if (redirectIO(tokens, size, STDOUT_FILENO, red_CreateApp) == -1)
                     return -1;
-            }
-            else if (strstr(cur, "2>") == cur) {
-                if (beg_io_index  == -1)
-                    beg_io_index = size;
-
-                if (fileno(stderr) != 2) { /* check for multiple fd redirection */
-                    fprintf(stderr, "Cannot redirect a file more than once in a single command launch.\n");
-                    return -1;
-                }
-
-                if (redirectIO(cur, STDERR_FILENO, red_CreateTrun) == -1)
-                    return -1;
-
-            }
         }
-        if (cur[0] == '>' && cur[1] != '>') {
+        else if (strstr(cur, "2>") == cur) {
+            if (beg_io_index  == -1)
+                beg_io_index = size;
+
+            if (fileno(stderr) != 2) { /* check for multiple fd redirection */
+                fprintf(stderr, "Cannot redirect a file more than once in a single command launch.\n");
+                return -1;
+            }
+
+            if (redirectIO(tokens, size, STDERR_FILENO, red_CreateTrun) == -1)
+                return -1;
+
+        }
+        else if (cur[0] == '>') {
             if (beg_io_index  == -1)
                 beg_io_index = size;
             
@@ -281,10 +304,10 @@ int performIOredirect(char **tokens) {
                 return -1;
             }
 
-            if (redirectIO(cur, STDERR_FILENO, red_CreateTrun) == -1)
+            if (redirectIO(tokens, size, STDOUT_FILENO, red_CreateTrun) == -1)
                 return -1;
         }
-        if (cur[0] == '<') {
+        else if (cur[0] == '<') {
             if (beg_io_index  == -1)
                 beg_io_index = size;
 
@@ -293,7 +316,7 @@ int performIOredirect(char **tokens) {
                 return -1;
             }
 
-            if (redirectIO(cur, STDERR_FILENO, red_Open) == -1)
+            if (redirectIO(tokens, size, STDIN_FILENO, red_Open) == -1)
                 return -1;
         }
     }
@@ -307,22 +330,20 @@ int performIOredirect(char **tokens) {
  * this function redirects it, with error checking, according
  * to the redirection enum parameter.
  */
-int redirectIO(char *cur, int to_redirect, enum redirection val) {
-    char *file_name = cur + sizeof(char *);  /* filename */
-
-    /* get the inputted file name from the commands*/
+int redirectIO(char **tokens, int size, int to_redirect, enum redirection val) {
+    char *file_name = tokens[size+1];  /* filename */
+    char *cur = tokens[size];
+    /* get name of file we will redirect to */
     if (val == red_CreateApp && to_redirect == STDERR_FILENO) {
         if (strlen(cur) > 3)
-            file_name = (cur+3);
+            file_name = tokens[size]+3;
     }
     else if (val == red_CreateApp || (val == red_CreateTrun && to_redirect == STDERR_FILENO)) {
         if (strlen(cur) > 2)
-            file_name = (cur+2);
+            file_name = tokens[size]+2;
     }
-    else {
-        if (strlen(cur) > 1)
-            file_name = (cur+1);
-    }
+    else if (strlen(cur) > 1)
+            file_name = tokens[size]+1;
 
     if (!file_name || strstr(file_name, "<") || strstr(file_name, ">")) {
         fprintf(stderr, "Invalid I/O redirection command %s.\n", cur);
@@ -355,7 +376,7 @@ int redirectIO(char *cur, int to_redirect, enum redirection val) {
         return -1;
     }
     if (close(new_file) == -1) {
-        fprintf(stderr, "Error closing extra reference to I/0 in I/O redirection: %s\n", strerror(errno));
+        fprintf(stderr, "Error closing extra reference to I/0 during redirection: %s\n", strerror(errno));
         return -1;
     }
     return 0;
