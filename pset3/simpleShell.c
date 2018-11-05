@@ -213,17 +213,19 @@ int parseLine(char **tokens) {
         
         fprintf(stderr, "Executing command: %s\n", tokens[0]);
 
+        if (hvv) /* closing script file, if run as an interpreter */
+
         if (execvp(tokens[0], tokens) == -1)
             exit(-1);
     }
     else { /* in parent */
-        if (wait(&status) == -1) { /* wait for child */
+        if (wait(&status) == -1 || !WIFEXITED(status)) { /* wait for child */
             fprintf(stderr, "Child process %d exited in error: %s\n", pid, strerror(errno));
             return -1;
         }
 
         if ((end = times(&time_end)) == -1) {
-            fprintf(stderr, "Error getting start time of command:%s\n", strerror(errno));
+            fprintf(stderr, "Error getting end time of command:%s\n", strerror(errno));
             return -1;
         }
 
@@ -234,7 +236,7 @@ int parseLine(char **tokens) {
         };
 
         /* print child statistics */
-        fprintf(stderr, "Command returned with exit code: %d,\n", status);
+        fprintf(stderr, "Command returned with exit code: %d,\n", WEXITSTATUS(status));
         fprintf(stderr, "consuming %f real seconds, %f user, %f system.\n",
                     (end - start) / (double) clktck, 
                     (time_end.tms_cutime - time_start.tms_cutime) / (double) clktck,
@@ -258,60 +260,40 @@ int performIOredirect(char **tokens) {
     int beg_io_index = -1;
     int size = 0;
     for (char *cur = tokens[size] ; cur != NULL ; cur = tokens[++size]) {
-        if (strstr(cur, "2>>") == cur) {
+        if (strncmp(cur, "2>", 2) == 0) { /* stderr redirection */
             if (beg_io_index  == -1)
                 beg_io_index = size;
 
-            if (fileno(stderr) != 2) {
+            if (fileno(stderr) != 2) {  /* check for multiple fd redirection */
                 fprintf(stderr, "Cannot redirect a file more than once in a single command launch.\n");
                 return -1; 
             }
 
-            if (redirectIO(tokens, size, STDERR_FILENO, red_CreateApp) == -1)
-                return -1;
-        }
-        else if (strstr(cur, ">>") == cur) {
-                if (beg_io_index  == -1)
-                    beg_io_index = size;
-                
-                if (fileno(stdout) != 1) {
-                    fprintf(stderr, "Cannot redirect a file more than once in a single command launch.\n");
-                    return -1; 
-                }
-
-                if (redirectIO(tokens, size, STDOUT_FILENO, red_CreateApp) == -1)
+            if (cur[2] == '>' && redirectIO(tokens, size, STDERR_FILENO, red_CreateApp) == -1)
+                    return -1;
+            else if (redirectIO(tokens, size, STDERR_FILENO, red_CreateTrun) == -1)
                     return -1;
         }
-        else if (strstr(cur, "2>") == cur) {
-            if (beg_io_index  == -1)
-                beg_io_index = size;
 
-            if (fileno(stderr) != 2) { /* check for multiple fd redirection */
-                fprintf(stderr, "Cannot redirect a file more than once in a single command launch.\n");
-                return -1;
-            }
-
-            if (redirectIO(tokens, size, STDERR_FILENO, red_CreateTrun) == -1)
-                return -1;
-
-        }
-        else if (cur[0] == '>') {
+        else if (cur[0] == '>') { /* stdout redirection */
             if (beg_io_index  == -1)
                 beg_io_index = size;
             
-            if (fileno(stdout) != 1) {
+            if (fileno(stdout) != 1) { /* check for multiple fd redirection */
                 fprintf(stderr, "Cannot redirect a file more than once in a single command launch.\n");
-                return -1;
+                return -1; 
             }
 
-            if (redirectIO(tokens, size, STDOUT_FILENO, red_CreateTrun) == -1)
+            if ( (cur[1] == '>' && redirectIO(tokens, size, STDOUT_FILENO, red_CreateApp) == -1)
+                return -1;
+            else if (redirectIO(tokens, size, STDOUT_FILENO, red_CreateTrun) == -1)
                 return -1;
         }
-        else if (cur[0] == '<') {
+        else if (cur[0] == '<') { /* stdin redirection */
             if (beg_io_index  == -1)
                 beg_io_index = size;
 
-            if (fileno(stdin) != 0) {
+            if (fileno(stdin) != 0) { /* check for multiple fd redirection */
                 fprintf(stderr, "Cannot redirect a file more than once in a single command launch.\n");
                 return -1;
             }
