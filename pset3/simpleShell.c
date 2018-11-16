@@ -8,7 +8,7 @@
  *    time, with arguments, waiting for and reporting
  *    the exit status and resource usage statistics.
  * 
- * version 1
+ * version 2
  * 
  * To run: 
  *    % gcc simpleShell.c -o simpleShell.exe
@@ -42,7 +42,7 @@ enum redirection {red_Open = 0, red_CreateTrun, red_CreateApp };
 
 int myShell(FILE *input);
 int tokenizeLine(char *line, char **tokens);
-int parseLine(char ** tokens);
+int parseLine(char ** tokens, FILE *input);
 int performIOredirect(char **tokens);
 int redirectIO(char **tokens, int size, int to_redirect, enum redirection val);
 
@@ -72,7 +72,8 @@ int main(int argc, char **argv) {
 int myShell(FILE *input) {
     char *buffer;
     if (!(buffer = malloc(sizeof(char)*MAX_LINE_SIZE))) {
-        fprintf(stderr, "Unable to allocate buffer in order to read from input: %s\n", strerror(errno));
+        fprintf(stderr, "Unable to allocate buffer in order to read from input: %s\n", 
+                                                                        strerror(errno));
         return -1;
     }
 
@@ -99,7 +100,7 @@ int myShell(FILE *input) {
                 exit(atoi(tokens[1]));
         }
         else
-            exit_status = parseLine(tokens);
+            exit_status = parseLine(tokens, input);
 
         free(tokens);
     }
@@ -160,7 +161,7 @@ int tokenizeLine(char *line, char **tokens) {
  * 
  *  This function returns the error code of the last spawned child.
  */
-int parseLine(char **tokens) {
+int parseLine(char **tokens, FILE *input) {
     /* check for built-in commands and comments */
     if (tokens[0][0] == '#') /* ignore comments */
         return 0;
@@ -213,8 +214,12 @@ int parseLine(char **tokens) {
         
         fprintf(stderr, "Executing command: %s\n", tokens[0]);
 
-        if (hvv) /* closing script file, if run as an interpreter */
-
+        if (input != stdin) { /* closing script file */
+            if (!fclose(input)) {
+                fprintf(stderr, "Error closing input file before exec: %s\n", strerror(errno));
+                return -1;
+            }
+        }   
         if (execvp(tokens[0], tokens) == -1)
             exit(-1);
     }
