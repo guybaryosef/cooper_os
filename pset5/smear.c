@@ -4,8 +4,18 @@
  * By: Guy Bar Yosef
  * Version: 1
  * 
+ * Smear - This program searches through the user-
+ * designated files and replaced each user specified
+ * target with a user specified replacement.
+ * 
+ * NOTE: 
+ *   - Each file must be small enough to fit in its
+ * entierty into the virtual address space.
+ *   - The target and replacement must be of equal size.
+ * 
  * Usage:
- *  $ smear TARGET REPLACEMENT file1 {file2...}
+ *  $ gcc smear.c -o smear
+ *  $ ./smear TARGET REPLACEMENT file1 {file2...}
  */
 
 #define _GNU_SOURCE
