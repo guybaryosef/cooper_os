@@ -11,3 +11,6 @@ A simple Shell Program
 
 #### Pset 4:
 A program that imitates the functionality of 'cat' piped to 'grep' piped to 'more'.
+
+#### Pset 5:
+a program that imitates a search and replace for multiple files.
