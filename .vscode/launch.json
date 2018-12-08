@@ -9,7 +9,7 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/pset6/debug_1",
+            "program": "${workspaceFolder}/pset6/debug_test_fifo",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/pset6/",

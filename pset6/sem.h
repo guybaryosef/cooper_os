@@ -4,32 +4,40 @@
  * By: Guy Bar Yosef 
  *
  * semaphore.h - Semaphore header file.
- * Includes also the N_PROC definition,
- * which defines maximum number of 
- * 'virtual processors'(processes).
+ * 
+ * Includes also the N_PROC definition, which defines 
+ * maximum number of 'virtual processors'(processes).
  * 
  * version: 1.0
  */
 
 
+/**** max process count ****/
 #ifndef N_PROC
 #define N_PROC 64
 
 #endif
 
 
-
+/**** semaphore ****/
 #ifndef SEMAPHORE
 #define SEMAPHORE
+
+/* NOTE: The sleep/wake implementation depends on receiving 
+   the USRSIG1 signal. Because this signal terminates programs
+   by default, whichever program that wishes to use this 
+   Semaphore implementation should handle the signal. */
 
 
 /* struct for the semaphore */
 typedef struct Semaphore {
-    char lock;
-    int count;
-    int waiting_processes[N_PROC];
+    char lock;  /* used to implement mutex-locking */
+    int count;  /* semaphore count value */ 
+    int sleep_count; /* number of times the semaphore went to sleep */
+    
+    /* array of processes waiting on the semaphore */
+    int waiting_processes[N_PROC]; 
     int waiting_process_index;
-
 } Semaphore;
 
 
@@ -44,7 +52,7 @@ void sem_init(Semaphore *s, int count);
 
 
 /*
- * sem_try - 'Trys' to perform the 'P' operation, 
+ * sem_try - 'Tries' to perform the 'P' operation, 
  * i.e. atomically decrement the semaphore. If the
  * count is 0, sem_try does not decrement it further.
  * 
@@ -68,12 +76,11 @@ void sem_wait(Semaphore *s);
 
 /*
  * sem_inc - Performs the 'V' operation- atomically 
- * incrementing the semaphor.
+ * incrementing the semaphore.
  * 
- * If any other tasks were sleeping on the semaphor,
+ * If any other tasks were sleeping on the semaphore,
  * send them a SIGUSR1 signal to wake them up.
  */
 void sem_inc(Semaphore *s);
-
 
 #endif

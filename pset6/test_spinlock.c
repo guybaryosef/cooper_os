@@ -18,32 +18,32 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "spinLockLib.c" /* gives spinlock mutex funcitonality */
+#include "spinLockLib.c" /* gives spinlock mutex functionality */
 
 
-void syncronized();
-void unsyncronized();
+void synchronized();
+void unsynchronized();
 
 
 int main() {
     printf("Version without a spinlock: \n");
-    unsyncronized();
+    unsynchronized();
 
     printf("\nVersion with a spinlock: \n");
-    syncronized();
+    synchronized();
 }
 
 
 /*
- * unsyncronized - Gives an example of how a multiple
- * user process program has syncronization issues.
+ * unsynchronized - Gives an example of how a multiple
+ * user process program has synchronization issues.
  */
-void unsyncronized() {
+void unsynchronized() {
     void *shared_region;
     if ((shared_region = mmap(NULL, 100, PROT_READ|PROT_WRITE, 
                             MAP_SHARED|MAP_ANONYMOUS, 0, 0)) < 0) {
 
-        fprintf(stderr, "Erorr mapping shared region: %s\n", strerror(errno));
+        fprintf(stderr, "Error mapping shared region: %s\n", strerror(errno));
         return;
     }
 
@@ -65,7 +65,7 @@ void unsyncronized() {
         }
     }
 
-    /* the parent process waits for al lthe children to return and then prints our_val. */
+    /* the parent process waits for all the children to return. */
     {
         while (wait(NULL) > 0) 
             ;
@@ -77,16 +77,16 @@ void unsyncronized() {
 
 
 /*
- * syncronized - Gives an example of how a multiple
- * user process program avoids syncronization issues
+ * synchronized - Gives an example of how a multiple
+ * user process program avoids synchronization issues
  * using a spinlock mutex.
  */
-void syncronized() {
+void synchronized() {
     void *shared_region;
     if ((shared_region = mmap(NULL, 100, PROT_READ|PROT_WRITE, 
                             MAP_SHARED|MAP_ANONYMOUS, 0, 0)) < 0) {
 
-        fprintf(stderr, "Erorr mapping shared region: %s\n", strerror(errno));
+        fprintf(stderr, "Error mapping shared region: %s\n", strerror(errno));
         return;
     }
 
@@ -117,7 +117,7 @@ void syncronized() {
         }
     }
 
-    /* the parent process waits for all its children to return and then prints the shared val. */
+    /* the parent process waits for all the children to return. */
     while (wait(NULL) > 0) 
         ;
 
