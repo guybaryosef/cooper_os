@@ -27,6 +27,7 @@ int acid_test(int num_writers);
 
 void h(int signo) {}; /* signal handler for the Semaphore implementation */
 
+
 int main() {
 
     /* semaphore implementation requires handling SIGUSR1 */  
@@ -116,8 +117,8 @@ int acid_test(int num_writers) {
     pid_t p;
     for (int i = 0 ; i < num_writers; ++i) {
         if ((p = fork()) < 0) {
-            fprintf(stderr, "Error forking preliminary test into "
-                                    "reader and writer: %s\n", strerror(errno));
+            fprintf(stderr, "Error forking acid test into "
+                                "writers: %s\n", strerror(errno));
             return -1;
         }
         else if (p == 0) {  /* in writers */

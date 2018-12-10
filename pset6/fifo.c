@@ -19,9 +19,11 @@
 
 /*
  * fifo_init - Initializes the shared memory FIFO.
+ * 
+ * NOTE: Call this function before any usage of the fifo.
  */
 void fifo_init(Fifo *f) {  
-    /* initialize binary semaphores (spin-lock mechanism) */
+    /* initialize binary semaphores (spinlock mechanism) */
     sem_init(&f->sem_reader, 1);
     sem_init(&f->sem_writer, 1);
 

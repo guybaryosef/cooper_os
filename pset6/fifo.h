@@ -19,8 +19,10 @@
 
 /* struct definition */
 typedef struct Fifo {
-    
-    /* need 2 semaphores b/c readers and writers are different groups */
+    /* readers and writers have different restrictions, so we need a semaphore
+       for each task. Moreso, we need to maintain a spinlock functionality (we 
+       will use binary semaphores) as well as the inherent sleep/wake 
+       functionality of semaphores. Therefore, overall we need 4 semaphores.  */
     Semaphore sem_reader;
     Semaphore sem_writer;
     Semaphore sem_full;
@@ -32,8 +34,11 @@ typedef struct Fifo {
 
 } Fifo;
 
+
 /*
  * fifo_init - Initializes the shared memory FIFO.
+ * 
+ * NOTE: Call this function before any usage of the fifo.
  */
 void fifo_init(Fifo *f);
 

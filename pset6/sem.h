@@ -33,11 +33,13 @@
 typedef struct Semaphore {
     char lock;  /* used to implement mutex-locking */
     int count;  /* semaphore count value */ 
-    int sleep_count; /* number of times the semaphore went to sleep */
     
     /* array of processes waiting on the semaphore */
     int waiting_processes[N_PROC]; 
     int waiting_process_index;
+
+    /* data members for debugging */ 
+    int sleep_count; /* number of times the semaphore went to sleep */
 } Semaphore;
 
 
