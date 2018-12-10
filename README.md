@@ -16,4 +16,4 @@ A program that imitates the functionality of 'cat' piped to 'grep' piped to 'mor
 a program that imitates a search and replace for multiple files using mmap.
 
 #### Pset 6:
-an implementation of a spinlock, mutex, semaphore, and fifo, along with testing code for each.
+an implementation of a spinlock, semaphore, and fifo, along with testing code for each.
