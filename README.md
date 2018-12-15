@@ -17,3 +17,6 @@ a program that imitates a search and replace for multiple files using mmap.
 
 #### Pset 6:
 an implementation of a spinlock, semaphore, and fifo, along with testing code for each.
+
+#### Pset 7:
+Several small programs that in one way or another relate to the linux kernel 
