@@ -3,14 +3,18 @@
  * Pset 7: Problem 5
  * By: Guy Bar Yosef
  *
- * q5 - Tests the scheduling of the operating system.
- * 
+ * q5 - Tests the scheduling of the operating system by initializing
+ * several children, the first of which sets for itself a different
+ * nice value (scheduling priority) than the rest. This function then
+ * appends writes CPU usage statistics to a csv file.
+ *
  * Usage:
- * 	  $ gcc cputimes.c -o cputimes
- *	  $ ./cputimes [number_of_processes] ... 
- 				   [nice value change of first process]...
-				   [sleep length of parent]
+ *    $ gcc cputimes.c -o cputimes
+ *    $ ./cputimes [number_of_processes] ...
+ *                  [nice value change of first process]...
+ *                  [sleep length of parent]
  */
+
 
 
 #include <stdio.h>
