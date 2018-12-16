@@ -100,8 +100,8 @@ int main(int argc, char **argv) {
 	int fd;
 	char *file_name = "q5_statistics.csv";
 	if ((fd = open(file_name, O_WRONLY|O_APPEND, 0777)) < 0) {
-		if (errno ==  ENOENT) {
-			errno = 0;
+		if (errno ==  ENOENT) {  /* we need to create the file, along with its title */
+			errno = 0; /* reset errno - all is good */
 			if ((fd = open(file_name, O_WRONLY|O_CREAT, 0777)) < 0)
 				perror("Error creating statistics file.\n");
 			else {
@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
 	unsigned long task0_cpu = task0_u_cpu + task0_s_cpu;
 
 	char *info;
-	if((info = malloc(300)) == NULL)
+	if((info = malloc(300)) == NULL)  /* overallocate memory */
 		perror("Error allocating memory for rusage writing.\n");
 
 	int info_size = sprintf(info, "%s, %s, %s, %lu, %lu, %f%%\n", argv[1], 
@@ -143,5 +143,7 @@ int main(int argc, char **argv) {
 	if (close(fd) < 0)
 		perror("Error closing statistics file.\n");
 
+	free(info);
+	
 	return 0;
 }
